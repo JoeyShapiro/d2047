@@ -1,0 +1,15 @@
+{
+  "name": "d2047",
+  "type": "module",
+  "version": "0.1.0",
+  "files": [
+    "d2047_bg.wasm",
+    "d2047.js",
+    "d2047.d.ts"
+  ],
+  "main": "d2047.js",
+  "types": "d2047.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ]
+}
