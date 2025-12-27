@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>2047 WASM</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: #faf8ef;
+        }
+        canvas {
+            border: 1px solid #bbada0;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="500" height="500"></canvas>
+    <script type="module">
+        import init from './pkg/d2047.js';
+        init();
+    </script>
+</body>
+</html>
