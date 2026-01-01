@@ -14,6 +14,10 @@ pub fn start() -> Result<(), JsValue> {
         .unwrap()
         .dyn_into::<CanvasRenderingContext2d>()?;
 
+    let tile_size = 100.0;
+    let grid_size = 4;
+    let mut tiles: Vec<Tile> = Vec::new();
+
     // Draw a simple 2048-style tile
     draw_tile(&context, 50.0, 50.0, 100.0, 2)?;
     draw_tile(&context, 170.0, 50.0, 100.0, 4)?;
@@ -21,14 +25,73 @@ pub fn start() -> Result<(), JsValue> {
 
     // Set up keyboard handler
     let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
-        web_sys::console::log_1(&format!("Key pressed: {}", event.key()).into());
-        // Handle arrow keys for game logic here
+        // web_sys::console::log_1(&format!("Key pressed: {}", event.key()).into());
+        let movement = match event.key().as_str() {
+            "ArrowUp" => {
+                Some(Movement{dx: 0, dy: -1})
+            },
+            "ArrowDown" => {
+                Some(Movement{dx: 0, dy: 1})
+            },
+            "ArrowLeft" => {
+                Some(Movement{dx: -1, dy: 0})
+            },
+            "ArrowRight" => {
+                Some(Movement{dx: 1, dy: 0})
+            },
+            _ => None,
+        };
+
+        if movement.is_none() {
+            return;
+        }
+
+        // move all tiles in the direction of the arrow key
+        let dir = movement.unwrap();
+        for tile in tiles.iter_mut() {
+            let x = (tile.x as i16) + dir.dx;
+            let y = (tile.y as i16) + dir.dy;
+            let m = (grid_size - 1) as i16;
+
+            tile.x = clamp(x, 0, m) as usize;
+            tile.y = clamp(y, 0, m) as usize;
+        }
+
+        // Redraw tiles
+        context.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
+        for tile in tiles.iter() {
+            let x = tile.x as f64 * tile_size + 50.0;
+            let y = tile.y as f64 * tile_size + 50.0;
+            draw_tile(&context, x, y, tile_size, tile.value).unwrap();
+        }
+
     }) as Box<dyn FnMut(_)>);
     
     document.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())?;
     closure.forget(); // Keep the closure alive
 
     Ok(())
+}
+
+struct Tile {
+    value: u32,
+    x: usize,
+    y: usize,
+}
+
+struct Movement {
+    dx: i16,
+    dy: i16,
+}
+
+fn clamp(value: i16, min: i16, max: i16) -> i16 {
+    if value < min {
+        min
+    } else if value > max {
+        max
+    } else {
+        value
+    }
 }
 
 fn draw_tile(
