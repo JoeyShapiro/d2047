@@ -1,6 +1,7 @@
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, KeyboardEvent};
+use web_sys::js_sys::Math;
 
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
@@ -17,11 +18,6 @@ pub fn start() -> Result<(), JsValue> {
     let tile_size = 100.0;
     let grid_size = 4;
     let mut tiles: Vec<Tile> = Vec::new();
-
-    // Draw a simple 2048-style tile
-    draw_tile(&context, 50.0, 50.0, 100.0, 2)?;
-    draw_tile(&context, 170.0, 50.0, 100.0, 4)?;
-    draw_tile(&context, 290.0, 50.0, 100.0, 2048)?;
 
     // Set up keyboard handler
     let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
@@ -57,6 +53,20 @@ pub fn start() -> Result<(), JsValue> {
             tile.y = clamp(y, 0, m) as usize;
         }
 
+        // get a new random tile
+        let mut made = false;
+        while !made {
+            let new_x = (Math::random() * grid_size as f64).floor() as usize;
+            let new_y = (Math::random() * grid_size as f64).floor() as usize;
+            if is_tile(&tiles, new_x, new_y) {
+                continue;
+            }
+
+            let new_value = if Math::random() < 0.9 { 2 } else { 4 };
+            tiles.push(Tile::new(new_value, new_x, new_y));
+            made = true
+        }
+
         // Redraw tiles
         context.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
         for tile in tiles.iter() {
@@ -64,7 +74,6 @@ pub fn start() -> Result<(), JsValue> {
             let y = tile.y as f64 * tile_size + 50.0;
             draw_tile(&context, x, y, tile_size, tile.value).unwrap();
         }
-
     }) as Box<dyn FnMut(_)>);
     
     document.add_event_listener_with_callback("keydown", closure.as_ref().unchecked_ref())?;
@@ -77,6 +86,21 @@ struct Tile {
     value: u32,
     x: usize,
     y: usize,
+}
+
+impl Tile {
+    fn new(value: u32, x: usize, y: usize) -> Self {
+        Tile { value, x, y }
+    }
+}
+
+fn is_tile(tiles: &Vec<Tile>, x: usize, y: usize) -> bool {
+    for tile in tiles.iter() {
+        if tile.x == x && tile.y == y {
+            return true;
+        }
+    }
+    false
 }
 
 struct Movement {
