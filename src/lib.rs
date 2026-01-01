@@ -44,13 +44,21 @@ pub fn start() -> Result<(), JsValue> {
 
         // move all tiles in the direction of the arrow key
         let dir = movement.unwrap();
-        for tile in tiles.iter_mut() {
-            let x = (tile.x as i16) + dir.dx;
-            let y = (tile.y as i16) + dir.dy;
-            let m = (grid_size - 1) as i16;
+        let mut did_move = true;
+        while did_move {
+            did_move = false;
+            for tile in tiles.iter_mut() {
+                let x = (tile.x as i16) + dir.dx;
+                let y = (tile.y as i16) + dir.dy;
+                let m = (grid_size - 1) as i16;
+    
+                tile.x = clamp(x, 0, m) as usize;
+                tile.y = clamp(y, 0, m) as usize;
 
-            tile.x = clamp(x, 0, m) as usize;
-            tile.y = clamp(y, 0, m) as usize;
+                did_move |= tile.x != tile.cx || tile.y != tile.cy;
+                tile.cx = tile.x;
+                tile.cy = tile.y;
+            }
         }
 
         // get a new random tile
@@ -86,11 +94,13 @@ struct Tile {
     value: u32,
     x: usize,
     y: usize,
+    cx: usize,
+    cy: usize,
 }
 
 impl Tile {
     fn new(value: u32, x: usize, y: usize) -> Self {
-        Tile { value, x, y }
+        Tile { value, x, y, cx: x, cy: y }
     }
 }
 
