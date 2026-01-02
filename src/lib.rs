@@ -59,6 +59,10 @@ pub fn start() -> Result<(), JsValue> {
                 let x = clamp((pos.0 as i16) + dir.dx, 0, m) as usize;
                 let y = clamp((pos.1 as i16) + dir.dy, 0, m) as usize;
 
+                if tiles.contains_key(&(x, y)) {
+                    continue;
+                }
+
                 did_move |= pos.0 != x || pos.1 != y;
                 // you cant move a box when youre standing in it
                 // but this is technically a clone
@@ -67,8 +71,20 @@ pub fn start() -> Result<(), JsValue> {
             }
         }
 
-        // now check for merges
+        // once more, to check for merges
         // went back and forth on this and a list. but this is simple and clean
+        for (pos, value) in tiles.clone().iter() {
+            let x = (pos.0 as i16 + dir.dx) as usize;
+            let y = (pos.1 as i16 + dir.dy) as usize;
+
+            if let Some(other_value) = tiles.get(&(x, y)) {
+                if *other_value == *value {
+                    // merge them
+                    tiles.remove(pos);
+                    tiles.insert((x, y), value * 2);
+                }
+            }
+        }
 
         // get a new random tile
         let mut made = false;
