@@ -139,19 +139,25 @@ fn draw_tile(
 ) -> Result<(), JsValue> {
     // Background color based on value
     let color = match value {
-        2 => "#eee4da",
-        4 => "#ede0c8",
-        8 => "#f2b179",
-        16 => "#f59563",
-        2048 => "#edc22e",
-        _ => "#cdc1b4",
+        2 => "#6272a4",
+        4 => "#8be9fd",
+        8 => "#50fa7b",
+        16 => "#ffb86c",
+        32 => "#ff79c6",
+        64 => "#bd93f9",
+        128 => "#ff5555",
+        256 => "#f1fa8c",
+        512 => "#44475a",
+        1024 => "#44475a",
+        2048 => "#44475a",
+        _ => "#ff00ff",
     };
     
     ctx.set_fill_style(&JsValue::from_str(color));
     ctx.fill_rect(x, y, size, size);
     
     // Draw the number
-    ctx.set_fill_style(&JsValue::from_str("#776e65"));
+    ctx.set_fill_style(&JsValue::from_str("#f8f8f2"));
     ctx.set_font("bold 32px sans-serif");
     ctx.set_text_align("center");
     ctx.set_text_baseline("middle");
