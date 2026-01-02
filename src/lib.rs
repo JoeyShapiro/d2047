@@ -2,6 +2,7 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, KeyboardEvent};
 use web_sys::js_sys::Math;
+use std::collections::HashMap;
 
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
@@ -17,7 +18,12 @@ pub fn start() -> Result<(), JsValue> {
 
     let tile_size = 100.0;
     let grid_size = 4;
-    let mut tiles: Vec<Tile> = Vec::new();
+    // not proper to do this, but it is easier
+    // feel wrong, dont need anything fancy. can do proper collision detection for something else
+    // this is grid based, so just check if something is there, no need to iterate a list 2 or 3 times
+    // now i dont need multiple list checks or frames/updates or rewinds
+    let mut tiles = HashMap::new();
+    tiles.insert((0, 0), 2);
 
     // Set up keyboard handler
     let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
@@ -47,40 +53,43 @@ pub fn start() -> Result<(), JsValue> {
         let mut did_move = true;
         while did_move {
             did_move = false;
-            for tile in tiles.iter_mut() {
-                let x = (tile.x as i16) + dir.dx;
-                let y = (tile.y as i16) + dir.dy;
+            for (pos, value) in tiles.clone().iter() {
                 let m = (grid_size - 1) as i16;
     
-                tile.x = clamp(x, 0, m) as usize;
-                tile.y = clamp(y, 0, m) as usize;
+                let x = clamp((pos.0 as i16) + dir.dx, 0, m) as usize;
+                let y = clamp((pos.1 as i16) + dir.dy, 0, m) as usize;
 
-                did_move |= tile.x != tile.cx || tile.y != tile.cy;
-                tile.cx = tile.x;
-                tile.cy = tile.y;
+                did_move |= pos.0 != x || pos.1 != y;
+                // you cant move a box when youre standing in it
+                // but this is technically a clone
+                tiles.remove(pos);
+                tiles.insert((x, y), *value);
             }
         }
+
+        // now check for merges
+        // went back and forth on this and a list. but this is simple and clean
 
         // get a new random tile
         let mut made = false;
         while !made {
             let new_x = (Math::random() * grid_size as f64).floor() as usize;
             let new_y = (Math::random() * grid_size as f64).floor() as usize;
-            if is_tile(&tiles, new_x, new_y) {
+            if tiles.contains_key(&(new_x, new_y)) {
                 continue;
             }
 
             let new_value = if Math::random() < 0.9 { 2 } else { 4 };
-            tiles.push(Tile::new(new_value, new_x, new_y));
+            tiles.insert((new_x, new_y), new_value);
             made = true
         }
 
         // Redraw tiles
         context.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
-        for tile in tiles.iter() {
-            let x = tile.x as f64 * tile_size + 50.0;
-            let y = tile.y as f64 * tile_size + 50.0;
-            draw_tile(&context, x, y, tile_size, tile.value).unwrap();
+        for (pos, value) in tiles.iter() {
+            let x = pos.0 as f64 * tile_size + 50.0;
+            let y = pos.1 as f64 * tile_size + 50.0;
+            draw_tile(&context, x, y, tile_size, *value).unwrap();
         }
     }) as Box<dyn FnMut(_)>);
     
@@ -88,29 +97,6 @@ pub fn start() -> Result<(), JsValue> {
     closure.forget(); // Keep the closure alive
 
     Ok(())
-}
-
-struct Tile {
-    value: u32,
-    x: usize,
-    y: usize,
-    cx: usize,
-    cy: usize,
-}
-
-impl Tile {
-    fn new(value: u32, x: usize, y: usize) -> Self {
-        Tile { value, x, y, cx: x, cy: y }
-    }
-}
-
-fn is_tile(tiles: &Vec<Tile>, x: usize, y: usize) -> bool {
-    for tile in tiles.iter() {
-        if tile.x == x && tile.y == y {
-            return true;
-        }
-    }
-    false
 }
 
 struct Movement {
