@@ -1,4 +1,5 @@
 build:
+    rm pkg/*
     wasm-pack build --target web
 
 serve:

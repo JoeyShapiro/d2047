@@ -2,7 +2,6 @@ use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{CanvasRenderingContext2d, HtmlCanvasElement, KeyboardEvent};
 use web_sys::js_sys::Math;
-use std::collections::HashMap;
 
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
@@ -22,8 +21,7 @@ pub fn start() -> Result<(), JsValue> {
     // feel wrong, dont need anything fancy. can do proper collision detection for something else
     // this is grid based, so just check if something is there, no need to iterate a list 2 or 3 times
     // now i dont need multiple list checks or frames/updates or rewinds
-    let mut tiles = HashMap::new();
-    tiles.insert((0, 0), 2);
+    let mut tiles: Vec<Tile> = Vec::new();
 
     // Set up keyboard handler
     let closure = Closure::wrap(Box::new(move |event: KeyboardEvent| {
@@ -53,59 +51,66 @@ pub fn start() -> Result<(), JsValue> {
         let mut did_move = true;
         while did_move {
             did_move = false;
-            for (pos, value) in tiles.clone().iter() {
+            for i in 0..tiles.len() {
                 let m = (grid_size - 1) as i16;
-    
-                let x = clamp((pos.0 as i16) + dir.dx, 0, m) as usize;
-                let y = clamp((pos.1 as i16) + dir.dy, 0, m) as usize;
+                
+                let x = clamp((tiles[i].x as i16) + dir.dx, 0, m) as usize;
+                let y = clamp((tiles[i].y as i16) + dir.dy, 0, m) as usize;
 
-                if tiles.contains_key(&(x, y)) {
+                // check for collision
+                if tiles.iter().enumerate().any(|(j, t)| j != i && t.x == x && t.y == y) {
                     continue;
                 }
 
-                did_move |= pos.0 != x || pos.1 != y;
-                // you cant move a box when youre standing in it
-                // but this is technically a clone
-                tiles.remove(pos);
-                tiles.insert((x, y), *value);
+                did_move |= tiles[i].x != x || tiles[i].y != y;
+                tiles[i].x = x;
+                tiles[i].y = y;
             }
         }
 
         // once more, to check for merges
         // went back and forth on this and a list. but this is simple and clean
-        for (pos, value) in tiles.clone().iter() {
-            let x = (pos.0 as i16 + dir.dx) as usize;
-            let y = (pos.1 as i16 + dir.dy) as usize;
-
-            if let Some(other_value) = tiles.get(&(x, y)) {
-                if *other_value == *value {
-                    // merge them
-                    tiles.remove(pos);
-                    tiles.insert((x, y), value * 2);
-                }
+        // TODO double merge and bad movement because using outdated board
+        // need to keep following them
+        // mght need a list after all
+        for i in 0..tiles.len() {
+            let x = (tiles[i].x as i16 + dir.dx) as usize;
+            let y = (tiles[i].y as i16 + dir.dy) as usize;
+            
+            let value = tiles[i].value;
+            if let Some(other) = tiles.iter_mut().find(|t| t.x == x && t.y == y && t.value == value) {
+                // merge
+                other.value *= 2;
+                tiles[i].value = 0; // mark for removal
             }
         }
+
+        // remove merged tiles
+        tiles.retain(|tile| tile.value != 0);
+        // todo maybe keep moving... again
+        // not sure. maybe merge first 
+        // also collision is outdated. i need a list
 
         // get a new random tile
         let mut made = false;
         while !made {
-            let new_x = (Math::random() * grid_size as f64).floor() as usize;
-            let new_y = (Math::random() * grid_size as f64).floor() as usize;
-            if tiles.contains_key(&(new_x, new_y)) {
+            let x = (Math::random() * grid_size as f64).floor() as usize;
+            let y = (Math::random() * grid_size as f64).floor() as usize;
+            if tiles.iter().any(|t| t.x == x && t.y == y) {
                 continue;
             }
 
-            let new_value = if Math::random() < 0.9 { 2 } else { 4 };
-            tiles.insert((new_x, new_y), new_value);
+            let value = if Math::random() < 0.9 { 2 } else { 4 };
+            tiles.push(Tile { x, y, value });
             made = true
         }
 
         // Redraw tiles
         context.clear_rect(0.0, 0.0, canvas.width() as f64, canvas.height() as f64);
-        for (pos, value) in tiles.iter() {
-            let x = pos.0 as f64 * tile_size + 50.0;
-            let y = pos.1 as f64 * tile_size + 50.0;
-            draw_tile(&context, x, y, tile_size, *value).unwrap();
+        for tile in tiles.iter() {
+            let x = tile.x as f64 * tile_size + 50.0;
+            let y = tile.y as f64 * tile_size + 50.0;
+            draw_tile(&context, x, y, tile_size, tile.value).unwrap();
         }
     }) as Box<dyn FnMut(_)>);
     
@@ -113,6 +118,12 @@ pub fn start() -> Result<(), JsValue> {
     closure.forget(); // Keep the closure alive
 
     Ok(())
+}
+
+struct Tile {
+    x: usize,
+    y: usize,
+    value: u32,
 }
 
 struct Movement {
