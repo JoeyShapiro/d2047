@@ -61,7 +61,20 @@ pub fn start() -> Result<(), JsValue> {
             }
         });
 
-        // move all tiles in the direction of the arrow key
+        // do merging first to stop gaps
+        for i in 0..tiles.len() {
+            let x = (tiles[i].x as i16 + dir.dx) as usize;
+            let y = (tiles[i].y as i16 + dir.dy) as usize;
+            
+            let value = tiles[i].value;
+            if let Some(other) = tiles.iter_mut().find(|t| t.x == x && t.y == y && t.value == value) {
+                // merge
+                other.value *= 2;
+                tiles[i].value = 0; // mark for removal
+            }
+        }
+
+        // now move all tiles in the direction of the arrow key
         let mut did_move = true;
         while did_move {
             did_move = false;
@@ -79,19 +92,6 @@ pub fn start() -> Result<(), JsValue> {
                 did_move |= tiles[i].x != x || tiles[i].y != y;
                 tiles[i].x = x;
                 tiles[i].y = y;
-            }
-        }
-
-        // once more, to check for merges
-        for i in 0..tiles.len() {
-            let x = (tiles[i].x as i16 + dir.dx) as usize;
-            let y = (tiles[i].y as i16 + dir.dy) as usize;
-            
-            let value = tiles[i].value;
-            if let Some(other) = tiles.iter_mut().find(|t| t.x == x && t.y == y && t.value == value) {
-                // merge
-                other.value *= 2;
-                tiles[i].value = 0; // mark for removal
             }
         }
 
