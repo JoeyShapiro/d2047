@@ -171,11 +171,11 @@ fn draw_tile(
         _ => "#ff00ff",
     };
     
-    ctx.set_fill_style(&JsValue::from_str(color));
+    ctx.set_fill_style_str(color);
     ctx.fill_rect(x, y, size, size);
     
     // Draw the number
-    ctx.set_fill_style(&JsValue::from_str("#f8f8f2"));
+    ctx.set_fill_style_str("#f8f8f2");
     ctx.set_font("bold 32px sans-serif");
     ctx.set_text_align("center");
     ctx.set_text_baseline("middle");
