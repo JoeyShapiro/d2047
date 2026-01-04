@@ -17,10 +17,6 @@ pub fn start() -> Result<(), JsValue> {
 
     let tile_size = 100.0;
     let grid_size = 4;
-    // not proper to do this, but it is easier
-    // feel wrong, dont need anything fancy. can do proper collision detection for something else
-    // this is grid based, so just check if something is there, no need to iterate a list 2 or 3 times
-    // now i dont need multiple list checks or frames/updates or rewinds
     let mut tiles: Vec<Tile> = Vec::new();
 
     // Set up keyboard handler
@@ -46,8 +42,26 @@ pub fn start() -> Result<(), JsValue> {
             return;
         }
 
-        // move all tiles in the direction of the arrow key
         let dir = movement.unwrap();
+
+        // sort tiles based on movement direction
+        tiles.sort_by(|a, b| {
+            if dir.dx == 1 {
+                // moving right
+                b.x.cmp(&a.x)
+            } else if dir.dx == -1 {
+                // moving left
+                a.x.cmp(&b.x)
+            } else if dir.dy == 1 {
+                // moving down
+                b.y.cmp(&a.y)
+            } else {
+                // moving up
+                a.y.cmp(&b.y)
+            }
+        });
+
+        // move all tiles in the direction of the arrow key
         let mut did_move = true;
         while did_move {
             did_move = false;
@@ -58,7 +72,7 @@ pub fn start() -> Result<(), JsValue> {
                 let y = clamp((tiles[i].y as i16) + dir.dy, 0, m) as usize;
 
                 // check for collision
-                if tiles.iter().enumerate().any(|(j, t)| j != i && t.x == x && t.y == y) {
+                if tiles.iter().enumerate().any(|(j, t)| j != i && t.value != 0 && t.x == x && t.y == y) {
                     continue;
                 }
 
@@ -69,10 +83,6 @@ pub fn start() -> Result<(), JsValue> {
         }
 
         // once more, to check for merges
-        // went back and forth on this and a list. but this is simple and clean
-        // TODO double merge and bad movement because using outdated board
-        // need to keep following them
-        // mght need a list after all
         for i in 0..tiles.len() {
             let x = (tiles[i].x as i16 + dir.dx) as usize;
             let y = (tiles[i].y as i16 + dir.dy) as usize;
@@ -87,9 +97,6 @@ pub fn start() -> Result<(), JsValue> {
 
         // remove merged tiles
         tiles.retain(|tile| tile.value != 0);
-        // todo maybe keep moving... again
-        // not sure. maybe merge first 
-        // also collision is outdated. i need a list
 
         // get a new random tile
         let mut made = false;
