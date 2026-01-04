@@ -1,0 +1,5 @@
+- touch controls
+- pop out with trancparency or something
+- sharper text
+- score
+- leaderboard with cheat prevention
